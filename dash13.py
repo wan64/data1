@@ -30,6 +30,8 @@ from matplotlib import font_manager
 # ===================== 【全局基础统一配置】 =====================
 # 页面全局配置，必须放在所有组件最开头
 st.set_page_config(page_title="中信建投期货-综合数据看板", layout="wide")
+# 加载阿里普惠体在线Web字体，供Plotly浏览器渲染使用
+st.markdown("""<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fontsource-alibaba-puhuiti@2.0.0/index.css">""", unsafe_allow_html=True)
 
 # ==========【核心字体初始化：使用仓库内阿里巴巴普惠体】==========
 FONT_FILE_NAME = "AlibabaPuHuiTi-3-55-Regular.ttf"
@@ -43,6 +45,8 @@ pio.templates["plotly_white"].layout.font.family = '"Alibaba PuHuiTi", "Noto San
 
 # -------- Matplotlib全局rc兜底配置 --------
 plt.rcParams["axes.unicode_minus"] = False
+plt.rcParams["font.family"] = FONT_PROP.get_name()
+plt.rcParams["font.sans-serif"] = [FONT_PROP.get_name()]
 sns.set_style("whitegrid")
 
 # 全局路径常量【模块1：综合业务看板-脚本同级目录】
@@ -770,5 +774,4 @@ elif board_select == "用户增长率":
     </p>
 </div>
 """
-# 加载阿里普惠体在线Web字体，供Plotly浏览器渲染使用
-        st.markdown("""<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fontsource-alibaba-puhuiti@2.0.0/index.css">""", unsafe_allow_html=True)
+        st.markdown(content, unsafe_allow_html=True)
