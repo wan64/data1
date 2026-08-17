@@ -28,24 +28,31 @@ import os
 from matplotlib import font_manager
 
 
-# 初始化登录状态
-if "login_ok" not in st.session_state:
-    st.session_state.login_ok = False
+# ============密码登录模块（直接放在文件首行）============
+if "auth_pass" not in st.session_state:
+    st.session_state.auth_pass = False
 
-# if not st.session_state.login_ok:
-#     st.title("访问验证")
-#     input_pwd = st.text_input("请输入访问密码", type="password")
-#     if st.button("确认登录"):
-#         # 从streamlit后台secrets读取密码，代码里不出现明文！
-#         if input_pwd == st.secrets["access_password"]:
-#             st.session_state.login_ok = True
-#             st.rerun()
-#         else:
-#             st.error("密码错误，请重新输入")
-#     st.stop()
+# 容错：没有配置Secrets时不会直接崩溃
+try:
+    real_password = st.secrets["board_password"]
+except KeyError:
+    real_password = None
 
-
-
+# 未配置密钥：提示管理员，直接放行
+if real_password is None:
+    st.warning("【管理员提醒】尚未在Streamlit后台Secrets配置访问密码，当前任何人均可访问！")
+else:
+    if not st.session_state.auth_pass:
+        st.title("访问验证")
+        input_pwd = st.text_input("请输入看板访问密码", type="password")
+        if st.button("确认进入看板"):
+            if input_pwd == real_password:
+                st.session_state.auth_pass = True
+                st.rerun()
+            else:
+                st.error("密码错误，请重新输入")
+        st.stop() # 校验不通过，终止加载看板内容
+# =======================================================
 
 
 
