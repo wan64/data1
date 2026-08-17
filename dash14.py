@@ -624,7 +624,8 @@ elif board_select == "用户增长率":
     sel_year = sel_quarter = sel_month = None
     # 时间筛选
     if not df_filter.empty:
-        df_filter[time_col_name] = df_filter[time_col_name].astype(str)
+        #df_filter[time_col_name] = df_filter[time_col_name].astype(str)
+        df_filter[time_col_name] = df_filter[time_col_name].astype(str).str.strip()
         year_list = sorted({i[:4] for i in df_filter[time_col_name]})
         sel_year = st.sidebar.selectbox("选择年份", ["全部年份"] + year_list)
         if sel_year != "全部年份":
@@ -684,16 +685,35 @@ elif board_select == "用户增长率":
             show_simple_note("<b>表格说明</b>：按选定时间粒度展示每期原始业务数据，包含周期、新增、存量、环比增速，可查看完整原始明细。")
         with col_chart:
             st.subheader("增长趋势图")
+            # chart_data = df_display.sort_values(time_col_name).reset_index(drop=True)
+            # time_list = chart_data[time_col_name].tolist()
+            # s_col_start, s_col_end = st.columns(2)
+            # with s_col_start:
+            #     start_idx = st.selectbox("起始周期", time_list, index=0)
+            # with s_col_end:
+            #     end_idx = st.selectbox("结束周期", time_list, index=len(time_list)-1)
+            # slice_start = time_list.index(start_idx)
+            # slice_end = time_list.index(end_idx)+1
+            # chart_slice = chart_data.iloc[slice_start:slice_end]
+            
             chart_data = df_display.sort_values(time_col_name).reset_index(drop=True)
-            time_list = chart_data[time_col_name].tolist()
+            # 核心修复：去重并保持时间升序，解决下拉选项重复
+            time_unique_raw = chart_data[time_col_name].unique()    
+            time_list = sorted([str(x) for x in time_unique_raw])
+
             s_col_start, s_col_end = st.columns(2)
             with s_col_start:
-                start_idx = st.selectbox("起始周期", time_list, index=0)
+                start_idx = st.selectbox("起始周期", time_list, index=0, key="growth_start_period")
             with s_col_end:
-                end_idx = st.selectbox("结束周期", time_list, index=len(time_list)-1)
-            slice_start = time_list.index(start_idx)
-            slice_end = time_list.index(end_idx)+1
-            chart_slice = chart_data.iloc[slice_start:slice_end]
+                end_idx = st.selectbox("结束周期", time_list, index=len(time_list)-1, key="growth_end_period")
+
+            # 根据选中周期筛选完整明细数据（不再依赖time_list.index切片）
+            chart_slice = chart_data[(chart_data[time_col_name] >= start_idx)& (chart_data[time_col_name] <= end_idx)].copy()
+            
+            
+            
+            
+            
             st.caption(f"图表展示区间：{start_idx} ~ {end_idx}")
             x_axis = chart_slice[time_col_name].astype(str)
             bar_y_data = chart_slice["期末累计用户"].fillna(0)
