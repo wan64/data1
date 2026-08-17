@@ -39,10 +39,9 @@ FONT_PROP = font_manager.FontProperties(fname=FONT_PATH)
 
 # -------- Plotly全局字体配置 --------
 pio.templates.default = "plotly_white"
-pio.templates["plotly_white"].layout.font.family = "Alibaba PuHuiTi"
+pio.templates["plotly_white"].layout.font.family = '"Alibaba PuHuiTi", "Noto Sans CJK SC", "WenQuanYi Micro Hei", "Microsoft YaHei", "PingFang SC", sans-serif'
 
 # -------- Matplotlib全局rc兜底配置 --------
-plt.rcParams["font.family"] = FONT_PROP.get_name()
 plt.rcParams["axes.unicode_minus"] = False
 sns.set_style("whitegrid")
 
@@ -673,7 +672,7 @@ elif board_select == "用户增长率":
                 hovertemplate="周期：%{x}<br>环比增速：%{y:.1f}%<extra></extra>"
             ))
             fig.update_layout(
-                font_family="Alibaba PuHuiTi",
+                font_family='"Alibaba PuHuiTi", "Noto Sans CJK SC", "WenQuanYi Micro Hei", "Microsoft YaHei", "PingFang SC", sans-serif',
                 yaxis=dict(title=f"期末累计{current_label}",title_font_color="#4285F4",gridcolor="#e8e8e8",range=[0,bar_y_data.max()*1.25]),
                 yaxis2=dict(title="环比增长率(%)",title_font_color="#E63946",overlaying="y",side="right",showgrid=False,range=[-20,200]),
                 legend=dict(orientation="h",yanchor="bottom",y=1.02,xanchor="right",x=1),height=520,margin=dict(b=130,t=70)
@@ -771,4 +770,5 @@ elif board_select == "用户增长率":
     </p>
 </div>
 """
-        st.markdown(content, unsafe_allow_html=True)
+# 加载阿里普惠体在线Web字体，供Plotly浏览器渲染使用
+        st.markdown("""<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fontsource-alibaba-puhuiti@2.0.0/index.css">""", unsafe_allow_html=True)
