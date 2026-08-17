@@ -27,6 +27,28 @@ import plotly.io as pio
 import os
 from matplotlib import font_manager
 
+
+# 初始化登录状态
+if "login_ok" not in st.session_state:
+    st.session_state.login_ok = False
+
+if not st.session_state.login_ok:
+    st.title("访问验证")
+    input_pwd = st.text_input("请输入访问密码", type="password")
+    if st.button("确认登录"):
+        # 从streamlit后台secrets读取密码，代码里不出现明文！
+        if input_pwd == st.secrets["access_password"]:
+            st.session_state.login_ok = True
+            st.rerun()
+        else:
+            st.error("密码错误，请重新输入")
+    st.stop()
+
+
+
+
+
+
 # ===================== 【全局基础统一配置】 =====================
 # 页面全局配置，必须放在所有组件最开头
 st.set_page_config(page_title="中信建投期货-综合数据看板", layout="wide")
