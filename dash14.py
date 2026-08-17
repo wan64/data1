@@ -710,73 +710,93 @@ elif board_select == "用户增长率":
             # 根据选中周期筛选完整明细数据（不再依赖time_list.index切片）
             chart_slice = chart_data[(chart_data[time_col_name] >= start_idx)& (chart_data[time_col_name] <= end_idx)].copy()
             
-            
-            
-            
-            
-            st.caption(f"图表展示区间：{start_idx} ~ {end_idx}")
-            x_axis = chart_slice[time_col_name].astype(str)
-            bar_y_data = chart_slice["期末累计用户"].fillna(0)
-            line_y_data = chart_slice[rate_col_name].fillna(np.nan)
-            add_data = chart_slice["当期新增用户"]
-            fig = go.Figure()
-            fig.add_trace(go.Bar(
-                x=x_axis,y=bar_y_data,name=f"期末累计{current_label}",marker_color="#4285F4",width=0.7,
-                text=[f"{int(i):,}" for i in bar_y_data],textposition="inside",textfont={"size":11},yaxis="y",
-                customdata=add_data.values.reshape(-1,1),hovertemplate="周期：%{x}<br>当期新增：%{customdata[0]:,}<br>累计存量：%{y:,}<extra></extra>"
-            ))
-            fig.add_trace(go.Scatter(
-                x=x_axis,y=line_y_data,name="环比增长率(%)",mode="lines+markers+text",
-                text=[f"{i:.1f}" if pd.notna(i) else "" for i in line_y_data],textposition="top center",
-                textfont={"size":12,"color":"#E63946"},marker_color="#E63946",line_color="#E63946",yaxis="y2",
-                hovertemplate="周期：%{x}<br>环比增速：%{y:.1f}%<extra></extra>"
-            ))
-            # =========【修复1：动态自适应柱状图Y轴顶部留白，解决数值过大留白过多】=========
-            bar_max_val = bar_y_data.max()
-            if bar_max_val > 10000:
-                bar_top_margin = bar_max_val * 1.10
-            elif bar_max_val > 1000:
-                bar_top_margin = bar_max_val * 1.18
+            # 区间筛选后无数据保护
+            if chart_slice.empty:
+                st.warning("选定起止周期内无数据，请重新调整区间！")
             else:
-                bar_top_margin = bar_max_val * 1.25
-
-            fig.update_layout(
-                font_family='"Alibaba PuHuiTi", "Noto Sans CJK SC", "WenQuanYi Micro Hei", "Microsoft YaHei", "PingFang SC", sans-serif',
-                yaxis=dict(title=f"期末累计{current_label}",title_font_color="#4285F4",gridcolor="#e8e8e8",range=[0,bar_top_margin]),
-                yaxis2=dict(title="环比增长率(%)",title_font_color="#E63946",overlaying="y",side="right",showgrid=False),
-                legend=dict(orientation="h",yanchor="bottom",y=1.02,xanchor="right",x=1),height=520,margin=dict(b=130,t=70)
-            )
-            # =========【修复2：月度粒度X轴拥挤优化，增加刻度采样间隔】=========
-            if select_time_kind == "月度":
-                fig.update_xaxes(type="category",tickangle=-45,nticks=min(16, len(x_axis)))
-            elif select_time_kind == "周度":
-                fig.update_xaxes(tickangle=-60,nticks=min(14, len(x_axis)))
-            else:
-                fig.update_xaxes(tickangle=-30)
-            st.plotly_chart(fig,use_container_width=True)
-            show_simple_note("<b>图表说明</b>：蓝色柱状=每期累计存量；红色折线=环比增速，可自定义起止周期查看区间走势。")
-
-            # =========【修复3：彻底解决KeyError，增加数据条数校验，重构趋势分析逻辑】=========
-            valid_rate_series = line_y_data.dropna()
-            if len(valid_rate_series) >= 2:
-                max_rate = valid_rate_series.max()
-                # 使用Series索引匹配，不再使用list.index，杜绝索引错位
-                max_rate_index = valid_rate_series.idxmax()
-                max_rate_period = x_axis.iloc[max_rate_index]
-                latest_rate_val = valid_rate_series.iloc[-1]
-                if len(valid_rate_series) >= 2:
-                    prev_rate = valid_rate_series.iloc[-2]
-                    trend_text = "持续走高" if latest_rate_val > prev_rate else "阶段性回落"
+                # 下方所有绘图、趋势分析代码全部缩进到此else内部
+                st.caption(f"图表展示区间：{start_idx} ~ {end_idx}")
+                x_axis = chart_slice[time_col_name].astype(str)
+                bar_y_data = chart_slice["期末累计用户"].fillna(0)
+                line_y_data = chart_slice[rate_col_name].fillna(np.nan)
+                add_data = chart_slice["当期新增用户"]
+                fig = go.Figure()
+                fig.add_trace(go.Bar(
+                    x=x_axis,y=bar_y_data,name=f"期末累计{current_label}",marker_color="#4285F4",width=0.7,
+                    text=[f"{int(i):,}" for i in bar_y_data],textposition="inside",textfont={"size":11},yaxis="y",
+                    customdata=add_data.values.reshape(-1,1),hovertemplate="周期：%{x}<br>当期新增：%{customdata[0]:,}<br>累计存量：%{y:,}<extra></extra>"))
+                fig.add_trace(go.Scatter(
+                    x=x_axis,y=line_y_data,name="环比增长率(%)",mode="lines+markers+text",
+                    text=[f"{i:.1f}" if pd.notna(i) else "" for i in line_y_data],textposition="top center",
+                    textfont={"size":12,"color":"#E63946"},marker_color="#E63946",line_color="#E63946",yaxis="y2",
+                    hovertemplate="周期：%{x}<br>环比增速：%{y:.1f}%<extra></extra>"))
+                # =========【修复1：动态自适应柱状图Y轴顶部留白，解决数值过大留白过多】=========
+                bar_max_val = bar_y_data.max()
+                if bar_max_val > 10000:
+                    bar_top_margin = bar_max_val * 1.10
+                elif bar_max_val > 1000:
+                    bar_top_margin = bar_max_val * 1.18
                 else:
-                    trend_text = "暂无前后对比"
-                trend_analysis = (
-                    f"区间最高环比增速{max_rate:.1f}%（{max_rate_period}），近期增速{latest_rate_val:.1f}%呈{trend_text}；"
-                    f"存量长期稳步上行，短期增速回落属于正常消化，若连续2期增速下滑则需要关注拉新动作落地效果。"
+                    bar_top_margin = bar_max_val * 1.25
+
+                fig.update_layout(
+                    font_family='"Alibaba PuHuiTi", "Noto Sans CJK SC", "WenQuanYi Micro Hei", "Microsoft YaHei", "PingFang SC", sans-serif',
+                    yaxis=dict(title=f"期末累计{current_label}",title_font_color="#4285F4",gridcolor="#e8e8e8",range=[0,bar_top_margin]),
+                    yaxis2=dict(title="环比增长率(%)",title_font_color="#E63946",overlaying="y",side="right",showgrid=False),
+                    legend=dict(orientation="h",yanchor="bottom",y=1.02,xanchor="right",x=1),height=520,margin=dict(b=130,t=70)
                 )
-            else:
-                trend_analysis = "当前区间有效环比增速数据不足，无法分析增速峰值与走势。"
-            show_description("增长趋势实时解读", trend_analysis)
-        st.divider()
+                # =========【修复2：月度粒度X轴拥挤优化，增加刻度采样间隔】=========
+                if select_time_kind == "月度":
+                    fig.update_xaxes(type="category",tickangle=-45,nticks=min(16, len(x_axis)))
+                elif select_time_kind == "周度":
+                    fig.update_xaxes(tickangle=-60,nticks=min(14, len(x_axis)))
+                else:
+                    fig.update_xaxes(tickangle=-30)
+                st.plotly_chart(fig,use_container_width=True)
+                show_simple_note("<b>图表说明</b>：蓝色柱状=每期累计存量；红色折线=环比增速，可自定义起止周期查看区间走势。")
+
+                # =========【修复3：彻底解决KeyError，增加数据条数校验，重构趋势分析逻辑】=========
+                # valid_rate_series = line_y_data.dropna()
+                # if len(valid_rate_series) >= 2:
+                #     max_rate = valid_rate_series.max()
+                #     # 使用Series索引匹配，不再使用list.index，杜绝索引错位
+                #     max_rate_index = valid_rate_series.idxmax()
+                #     max_rate_period = x_axis.iloc[max_rate_index]
+                #     latest_rate_val = valid_rate_series.iloc[-1]
+                #     if len(valid_rate_series) >= 2:
+                #         prev_rate = valid_rate_series.iloc[-2]
+                #         trend_text = "持续走高" if latest_rate_val > prev_rate else "阶段性回落"
+                #     else:
+                #         trend_text = "暂无前后对比"
+                #     trend_analysis = (
+                #         f"区间最高环比增速{max_rate:.1f}%（{max_rate_period}），近期增速{latest_rate_val:.1f}%呈{trend_text}；"
+                #         f"存量长期稳步上行，短期增速回落属于正常消化，若连续2期增速下滑则需要关注拉新动作落地效果。"
+                #     )
+                # else:
+                #     trend_analysis = "当前区间有效环比增速数据不足，无法分析增速峰值与走势。"
+                    
+                valid_rate_series = line_y_data.dropna()
+                if len(valid_rate_series) >= 1:
+                    max_rate = valid_rate_series.max()
+                    # idxmax拿到原始行索引，再定位【顺序位置】
+                    max_rate_row_idx = valid_rate_series.idxmax()
+                    pos_in_chart_slice = chart_slice.index.get_loc(max_rate_row_idx)
+                    max_rate_period = x_axis.iloc[pos_in_chart_slice]
+
+                    latest_rate_val = valid_rate_series.iloc[-1]
+                    if len(valid_rate_series) >= 2:
+                        prev_rate = valid_rate_series.iloc[-2]
+                        trend_text = "持续走高" if latest_rate_val > prev_rate else "阶段性回落"
+                    else:
+                        trend_text = "暂无前后对比"
+                    trend_analysis = (
+                        f"区间最高环比增速{max_rate:.1f}%（{max_rate_period}），近期增速{latest_rate_val:.1f}%呈{trend_text}；"
+                        f"存量长期稳步上行，短期增速回落属于正常消化，若连续2期增速下滑则需要关注拉新动作落地效果。"
+                    )
+                else:
+                    trend_analysis = "当前区间有效环比增速数据不足，无法分析增速峰值与走势。"       
+                show_description("增长趋势实时解读", trend_analysis)
+            st.divider()
         # 板块三 TOP10排行【核心修改：全公司维度隐藏图表，文字提示】
         st.subheader("三、当期TOP10机构规模排行")
         latest_time = df_filter[time_col_name].max()
