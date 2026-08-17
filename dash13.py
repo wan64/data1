@@ -32,17 +32,17 @@ from matplotlib import font_manager
 if "login_ok" not in st.session_state:
     st.session_state.login_ok = False
 
-if not st.session_state.login_ok:
-    st.title("访问验证")
-    input_pwd = st.text_input("请输入访问密码", type="password")
-    if st.button("确认登录"):
-        # 从streamlit后台secrets读取密码，代码里不出现明文！
-        if input_pwd == st.secrets["access_password"]:
-            st.session_state.login_ok = True
-            st.rerun()
-        else:
-            st.error("密码错误，请重新输入")
-    st.stop()
+# if not st.session_state.login_ok:
+#     st.title("访问验证")
+#     input_pwd = st.text_input("请输入访问密码", type="password")
+#     if st.button("确认登录"):
+#         # 从streamlit后台secrets读取密码，代码里不出现明文！
+#         if input_pwd == st.secrets["access_password"]:
+#             st.session_state.login_ok = True
+#             st.rerun()
+#         else:
+#             st.error("密码错误，请重新输入")
+#     st.stop()
 
 
 
