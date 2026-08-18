@@ -1,22 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-整合版 中信建投期货 双合一数据看板【稳定运行定稿版｜阿里巴巴普惠体字体修复】
-优化&修复清单：
-1.Logo移至标题右侧，与标题水平平行
-2.增长趋势图、适当性图表新增实时业务分析说明框，对齐图2样式
-3.全公司维度TOP10图表空白替换文字提示，引导切换细分机构
-4.新增：所有Matplotlib静态图表支持标题行右侧同行下载PNG按钮（Plotly原生自带下载无需改动）
-5.【重要修复】Matplotlib中文方框问题，使用项目内阿里巴巴普惠体ttf，本地Mac+Streamlit Cloud双环境兼容
-6.【统一字体】Plotly同步适配阿里巴巴普惠体，全看板字体统一
-====本次重点修复====
-修复1：存量数值过大Y轴留白过多，动态自适应y轴顶部留白比例
-修复2：月度粒度X轴标签拥挤重叠，增加刻度采样间隔
-修复3：KeyError崩溃（max_rate索引不匹配问题 + 环比数据条数校验，杜绝全公司/周度场景报错）
-适配Mac本机路径，修复空白/渲染卡顿、内存堆积，结构完整闭环
-本机运行命令：终端执行 streamlit run 文件名.py
+中信建投期货数据看板
 """
+
 import matplotlib
-# Mac系统绘图后端强制适配，防止画布黑屏
 matplotlib.use('Agg')
 from io import BytesIO
 from PIL import Image
@@ -684,20 +671,9 @@ elif board_select == "用户增长率":
             st.dataframe(table_df, height=500, use_container_width=True, hide_index=True)
             show_simple_note("<b>表格说明</b>：按选定时间粒度展示每期原始业务数据，包含周期、新增、存量、环比增速，可查看完整原始明细。")
         with col_chart:
-            st.subheader("增长趋势图")
-            # chart_data = df_display.sort_values(time_col_name).reset_index(drop=True)
-            # time_list = chart_data[time_col_name].tolist()
-            # s_col_start, s_col_end = st.columns(2)
-            # with s_col_start:
-            #     start_idx = st.selectbox("起始周期", time_list, index=0)
-            # with s_col_end:
-            #     end_idx = st.selectbox("结束周期", time_list, index=len(time_list)-1)
-            # slice_start = time_list.index(start_idx)
-            # slice_end = time_list.index(end_idx)+1
-            # chart_slice = chart_data.iloc[slice_start:slice_end]
-            
+            st.subheader("增长趋势图")           
             chart_data = df_display.sort_values(time_col_name).reset_index(drop=True)
-            # 核心修复：去重并保持时间升序，解决下拉选项重复
+            # 去重并保持时间升序
             time_unique_raw = chart_data[time_col_name].unique()    
             time_list = sorted([str(x) for x in time_unique_raw])
 
@@ -714,7 +690,6 @@ elif board_select == "用户增长率":
             if chart_slice.empty:
                 st.warning("选定起止周期内无数据，请重新调整区间！")
             else:
-                # 下方所有绘图、趋势分析代码全部缩进到此else内部
                 st.caption(f"图表展示区间：{start_idx} ~ {end_idx}")
                 x_axis = chart_slice[time_col_name].astype(str)
                 bar_y_data = chart_slice["期末累计用户"].fillna(0)
@@ -730,7 +705,6 @@ elif board_select == "用户增长率":
                     text=[f"{i:.1f}" if pd.notna(i) else "" for i in line_y_data],textposition="top center",
                     textfont={"size":12,"color":"#E63946"},marker_color="#E63946",line_color="#E63946",yaxis="y2",
                     hovertemplate="周期：%{x}<br>环比增速：%{y:.1f}%<extra></extra>"))
-                # =========【修复1：动态自适应柱状图Y轴顶部留白，解决数值过大留白过多】=========
                 bar_max_val = bar_y_data.max()
                 if bar_max_val > 10000:
                     bar_top_margin = bar_max_val * 1.10
@@ -745,7 +719,7 @@ elif board_select == "用户增长率":
                     yaxis2=dict(title="环比增长率(%)",title_font_color="#E63946",overlaying="y",side="right",showgrid=False),
                     legend=dict(orientation="h",yanchor="bottom",y=1.02,xanchor="right",x=1),height=520,margin=dict(b=130,t=70)
                 )
-                # =========【修复2：月度粒度X轴拥挤优化，增加刻度采样间隔】=========
+                # =========【月度粒度X轴拥挤优化，增加刻度采样间隔】=========
                 if select_time_kind == "月度":
                     fig.update_xaxes(type="category",tickangle=-45,nticks=min(16, len(x_axis)))
                 elif select_time_kind == "周度":
@@ -753,28 +727,7 @@ elif board_select == "用户增长率":
                 else:
                     fig.update_xaxes(tickangle=-30)
                 st.plotly_chart(fig,use_container_width=True)
-                show_simple_note("<b>图表说明</b>：蓝色柱状=每期累计存量；红色折线=环比增速，可自定义起止周期查看区间走势。")
-
-                # =========【修复3：彻底解决KeyError，增加数据条数校验，重构趋势分析逻辑】=========
-                # valid_rate_series = line_y_data.dropna()
-                # if len(valid_rate_series) >= 2:
-                #     max_rate = valid_rate_series.max()
-                #     # 使用Series索引匹配，不再使用list.index，杜绝索引错位
-                #     max_rate_index = valid_rate_series.idxmax()
-                #     max_rate_period = x_axis.iloc[max_rate_index]
-                #     latest_rate_val = valid_rate_series.iloc[-1]
-                #     if len(valid_rate_series) >= 2:
-                #         prev_rate = valid_rate_series.iloc[-2]
-                #         trend_text = "持续走高" if latest_rate_val > prev_rate else "阶段性回落"
-                #     else:
-                #         trend_text = "暂无前后对比"
-                #     trend_analysis = (
-                #         f"区间最高环比增速{max_rate:.1f}%（{max_rate_period}），近期增速{latest_rate_val:.1f}%呈{trend_text}；"
-                #         f"存量长期稳步上行，短期增速回落属于正常消化，若连续2期增速下滑则需要关注拉新动作落地效果。"
-                #     )
-                # else:
-                #     trend_analysis = "当前区间有效环比增速数据不足，无法分析增速峰值与走势。"
-                    
+                show_simple_note("<b>图表说明</b>：蓝色柱状=每期累计存量；红色折线=环比增速，可自定义起止周期查看区间走势。")                
                 valid_rate_series = line_y_data.dropna()
                 if len(valid_rate_series) >= 1:
                     max_rate = valid_rate_series.max()
